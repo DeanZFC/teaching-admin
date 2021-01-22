@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context-4.2.xsd
+                           http://www.springframework.org/schema/tx
+                           http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <!-- 扫描service、dao组件 -->
+    <context:component-scan base-package="com.hxy.*.service,com.hxy.*.dao" />
+
+    <!--加载SpringContextUtils到容器-->
+    <bean name="springContextUtils" class="com.hxy.base.utils.SpringContextUtils"/>
+
+    <!-- 引入配置文件 -->
+    <bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:conf/jdbc.properties</value>
+                <value>classpath:conf/cas.properties</value>
+                <value>classpath:conf/redisSentinel.properties</value>
+                <value>classpath:conf/redis.properties</value>
+                <value>classpath:conf/app.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- spring和MyBatis完美整合，不需要mybatis的配置映射文件 -->
+    <bean id="sqlSessionFactory"
+          class="com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean">
+        <!-- 配置数据源 -->
+        <property name="dataSource" ref="dataSource" />
+        <!-- 自动扫描 Xml 文件位置 -->
+        <property name="mapperLocations" value="classpath*:mapping/**/*.xml" />
+        <!-- 配置 Mybatis 配置文件（可无） -->
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+        <!-- 配置包别名，支持通配符 * 或者 ; 分割 -->
+        <property name="typeAliasesPackage" value="com.hxy.dto,com.hxy.sys.entity" />
+        <!-- 枚举属性配置扫描，支持通配符 * 或者 ; 分割 -->
+        <!-- <property name="typeEnumsPackage" value="com.baomidou.springmvc.entity.*.enums"/> -->
+        <!-- 以上配置和传统 Mybatis 一致 -->
+        <!-- MP 全局配置注入 -->
+        <property name="globalConfig" ref="globalConfig" />
+    </bean>
+
+    <!-- 定义 MP 全局策略 -->
+    <bean id="globalConfig" class="com.baomidou.mybatisplus.entity.GlobalConfiguration">
+        <!-- 主键策略配置 -->
+        <property name="idType" value="2" />
+        <!-- 数据库类型配置 -->
+        <property name="dbType" value="mysql" />
+        <!-- 全局表为下划线命名设置 true -->
+        <property name="dbColumnUnderline" value="true" />
+        <!--sql注入器配置-->
+        <property name="sqlInjector">
+            <bean class="com.baomidou.mybatisplus.mapper.AutoSqlInjector" />
+        </property>
+    </bean>
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <description>DAO接口所在包名，Spring会自动查找其下的类</description>
+        <property name="basePackage" value="com.hxy.*.dao" />
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+    </bean>
+
+    <!-- xml mapper热加载 sqlSessionFactory:session工厂 mapperLocations:mapper匹配路径
+        enabled:是否开启动态加载 默认:false delaySeconds:项目启动延迟加载时间 单位：秒 默认:10s sleepSeconds:刷新时间间隔
+        单位：秒 默认:20s -->
+    <bean class="com.baomidou.mybatisplus.spring.MybatisMapperRefresh">
+        <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactory" />
+        <constructor-arg name="mapperLocations"
+                         value="classpath*:mapping/**/*.xml" />
+        <constructor-arg name="delaySeconds" value="10" />
+        <constructor-arg name="sleepSeconds" value="20" />
+        <constructor-arg name="enabled" value="true" />
+    </bean>
+
+    <!-- (事务管理) -->
+    <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+    <!-- 注解 -->
+    <tx:annotation-driven transaction-manager="txManager" />
+
+
+</beans>
